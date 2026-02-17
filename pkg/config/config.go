@@ -45,6 +45,7 @@ type NetworkOperatorConfig struct {
 	ComponentVersion string `yaml:"componentVersion"`
 	Repository       string `yaml:"repository"`
 	Namespace        string `yaml:"namespace"`
+	DocsBaseURL      string `yaml:"docsBaseURL"`
 }
 
 type DOCADriverConfig struct {

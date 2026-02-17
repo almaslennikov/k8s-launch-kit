@@ -8,7 +8,7 @@ nodeCapabilities:
   rdma: true
 description: |
   SR-IOV Infiniband RDMA profile offers high-performance virtualized Infiniband networking with hardware acceleration
-deploymentGuide: sriov-ib-rdma.rst
+deploymentGuide: quick-start/sriov-ib-rdma.html
 templates:
   - 10-nicclusterpolicy.yaml
   - 20-ippool.yaml

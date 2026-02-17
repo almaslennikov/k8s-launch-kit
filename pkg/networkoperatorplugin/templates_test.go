@@ -19,6 +19,7 @@ package networkoperatorplugin
 import (
 	"testing"
 
+	"github.com/nvidia/k8s-launch-kit/pkg/profiles"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -432,6 +433,138 @@ func TestTemplateValidation(t *testing.T) {
 			assert.False(t, hasPlane && hasRail,
 				"Template %s should not be valid for multiplane (missing required placeholders)", template)
 		}
+	})
+}
+
+func TestBuildDocURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		baseURL  string
+		guide    string
+		expected string
+	}{
+		{
+			name:     "standard URL",
+			baseURL:  "https://docs.nvidia.com/networking/display/kubernetes2610",
+			guide:    "quick-start/sriov-network-rdma.html",
+			expected: "https://docs.nvidia.com/networking/display/kubernetes2610/quick-start/sriov-network-rdma.html",
+		},
+		{
+			name:     "base URL with trailing slash",
+			baseURL:  "https://docs.nvidia.com/networking/display/kubernetes25100/",
+			guide:    "quick-start/sriov-network-rdma.html",
+			expected: "https://docs.nvidia.com/networking/display/kubernetes25100/quick-start/sriov-network-rdma.html",
+		},
+		{
+			name:     "spectrum-x guide path",
+			baseURL:  "https://docs.nvidia.com/networking/display/kubernetes2610",
+			guide:    "nic-conf-operator/spectrum-x-configuration.html",
+			expected: "https://docs.nvidia.com/networking/display/kubernetes2610/nic-conf-operator/spectrum-x-configuration.html",
+		},
+		{
+			name:     "empty base URL",
+			baseURL:  "",
+			guide:    "quick-start/sriov-network-rdma.html",
+			expected: "",
+		},
+		{
+			name:     "empty guide path",
+			baseURL:  "https://docs.nvidia.com/networking/display/kubernetes2610",
+			guide:    "",
+			expected: "",
+		},
+		{
+			name:     "both empty",
+			baseURL:  "",
+			guide:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildDocURL(tt.baseURL, tt.guide)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGenerateOverviewHTML(t *testing.T) {
+	t.Run("with notes", func(t *testing.T) {
+		profile := &profiles.Profile{
+			Name:            "Spectrum-X Multi-Rail SWPLB",
+			Description:     "Spectrum-X profile for swplb mode.",
+			Notes:           "CIDR pool configs are not generated.",
+			DeploymentGuide: "nic-conf-operator/spectrum-x-configuration.html",
+		}
+		files := map[string]string{
+			"10-nicclusterpolicy.yaml": "content1",
+			"30-nicconfigurationtemplate.yaml": "content2",
+		}
+
+		html, err := GenerateOverviewHTML(profile, "v26.1.0", "https://docs.nvidia.com/networking/display/kubernetes2610", files)
+		assert.NoError(t, err)
+		assert.Contains(t, html, "Spectrum-X Multi-Rail SWPLB")
+		assert.Contains(t, html, "Spectrum-X profile for swplb mode.")
+		assert.Contains(t, html, "CIDR pool configs are not generated.")
+		assert.Contains(t, html, "10-nicclusterpolicy.yaml")
+		assert.Contains(t, html, "30-nicconfigurationtemplate.yaml")
+		assert.Contains(t, html, "content1")
+		assert.Contains(t, html, "content2")
+		assert.Contains(t, html, "<details>")
+		assert.Contains(t, html, "https://docs.nvidia.com/networking/display/kubernetes2610/nic-conf-operator/spectrum-x-configuration.html")
+		assert.Contains(t, html, "v26.1.0")
+	})
+
+	t.Run("without notes", func(t *testing.T) {
+		profile := &profiles.Profile{
+			Name:            "SR-IOV Ethernet RDMA",
+			Description:     "SR-IOV Ethernet RDMA profile.",
+			DeploymentGuide: "quick-start/sriov-network-rdma.html",
+		}
+		files := map[string]string{
+			"10-nicclusterpolicy.yaml": "content1",
+			"50-pod.yaml":             "content2",
+		}
+
+		html, err := GenerateOverviewHTML(profile, "v26.1.0", "https://docs.nvidia.com/networking/display/kubernetes2610", files)
+		assert.NoError(t, err)
+		assert.Contains(t, html, "SR-IOV Ethernet RDMA")
+		assert.NotContains(t, html, "<strong>Note:</strong>")
+		assert.Contains(t, html, "10-nicclusterpolicy.yaml")
+		assert.Contains(t, html, "50-pod.yaml")
+	})
+
+	t.Run("without docs base URL", func(t *testing.T) {
+		profile := &profiles.Profile{
+			Name:            "SR-IOV Ethernet RDMA",
+			Description:     "Test profile.",
+			DeploymentGuide: "quick-start/sriov-network-rdma.html",
+		}
+		files := map[string]string{
+			"10-nicclusterpolicy.yaml": "content1",
+		}
+
+		html, err := GenerateOverviewHTML(profile, "v26.1.0", "", files)
+		assert.NoError(t, err)
+		assert.Contains(t, html, "SR-IOV Ethernet RDMA")
+		assert.NotContains(t, html, "Open Deployment Guide")
+	})
+
+	t.Run("excludes overview.html from file list", func(t *testing.T) {
+		profile := &profiles.Profile{
+			Name:        "Test Profile",
+			Description: "Test.",
+		}
+		files := map[string]string{
+			"10-nicclusterpolicy.yaml": "content1",
+			"overview.html":           "should be excluded",
+		}
+
+		html, err := GenerateOverviewHTML(profile, "v26.1.0", "", files)
+		assert.NoError(t, err)
+		assert.Contains(t, html, "10-nicclusterpolicy.yaml")
+		assert.NotContains(t, html, ">overview.html<")
 	})
 }
 

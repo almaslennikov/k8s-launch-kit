@@ -26,13 +26,34 @@ import (
 
 func TestApplySpectrumXDefaults_SetsImpliedValues(t *testing.T) {
 	opts := &options.Options{
-		SpectrumX: true,
+		SpectrumX:      true,
+		MultiplaneMode: "none",
 	}
 	err := applySpectrumXDefaults(opts)
 	require.NoError(t, err)
 	assert.Equal(t, "ethernet", opts.Fabric)
 	assert.Equal(t, "sriov", opts.DeploymentType)
 	assert.True(t, opts.Multirail)
+	assert.Equal(t, "RA2.1", opts.SPCXVersion)
+}
+
+func TestApplySpectrumXDefaults_ErrorOnMissingMultiplaneMode(t *testing.T) {
+	opts := &options.Options{
+		SpectrumX: true,
+	}
+	err := applySpectrumXDefaults(opts)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--multiplane-mode")
+}
+
+func TestApplySpectrumXDefaults_ErrorOnMissingNumberOfPlanes(t *testing.T) {
+	opts := &options.Options{
+		SpectrumX:      true,
+		MultiplaneMode: "swplb",
+	}
+	err := applySpectrumXDefaults(opts)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "--number-of-planes")
 }
 
 func TestApplySpectrumXDefaults_NoOpWhenDisabled(t *testing.T) {
@@ -48,8 +69,9 @@ func TestApplySpectrumXDefaults_NoOpWhenDisabled(t *testing.T) {
 
 func TestApplySpectrumXDefaults_AcceptsMatchingFabric(t *testing.T) {
 	opts := &options.Options{
-		SpectrumX: true,
-		Fabric:    "ethernet",
+		SpectrumX:      true,
+		Fabric:         "ethernet",
+		MultiplaneMode: "none",
 	}
 	err := applySpectrumXDefaults(opts)
 	require.NoError(t, err)

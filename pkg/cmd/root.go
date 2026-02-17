@@ -279,6 +279,15 @@ func applySpectrumXDefaults(opts *options.Options) error {
 	opts.Fabric = "ethernet"
 	opts.DeploymentType = "sriov"
 	opts.Multirail = true
+	if opts.SPCXVersion == "" {
+		opts.SPCXVersion = "RA2.1"
+	}
+	if opts.MultiplaneMode == "" {
+		return fmt.Errorf("--spectrum-x requires --multiplane-mode (swplb, hwplb, uniplane, none)")
+	}
+	if opts.MultiplaneMode != "none" && opts.NumberOfPlanes == 0 {
+		return fmt.Errorf("--multiplane-mode %s requires --number-of-planes", opts.MultiplaneMode)
+	}
 	return nil
 }
 

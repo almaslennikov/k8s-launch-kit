@@ -211,16 +211,15 @@ func TestCLIOnlyProfileResolution(t *testing.T) {
 		assert.True(t, valid, "should match sriov-ib-rdma; reason: %s", reason)
 	})
 
-	t.Run("spectrum-x without version fails RA2.1 profile", func(t *testing.T) {
+	t.Run("spectrum-x without version defaults to RA2.1 and matches", func(t *testing.T) {
 		opts := options.Options{
 			SpectrumX:      true,
 			MultiplaneMode: "hwplb",
 			NumberOfPlanes: 2,
-			// SPCXVersion intentionally empty
+			// SPCXVersion intentionally empty — applySpectrumXDefaults sets it to RA2.1
 		}
 		valid, reason := resolveProfile(t, opts, nil, spectrumXProfile, defaultCapabilities)
-		assert.False(t, valid)
-		assert.Contains(t, reason, "SPCX version")
+		assert.True(t, valid, "should match after defaulting SPCXVersion to RA2.1; reason: %s", reason)
 	})
 }
 
@@ -308,6 +307,7 @@ func TestMixedCLIConfigProfileResolution(t *testing.T) {
 		opts := options.Options{
 			SpectrumX:      true,
 			MultiplaneMode: "swplb", // CLI overrides mode
+			NumberOfPlanes: 2,
 		}
 		valid, reason := resolveProfile(t, opts, cfgProfile, spectrumXSwplbProfile, defaultCapabilities)
 		assert.True(t, valid, "CLI --multiplane-mode swplb should switch to swplb profile; reason: %s", reason)
@@ -326,6 +326,7 @@ func TestMixedCLIConfigProfileResolution(t *testing.T) {
 		}
 		opts := options.Options{
 			SpectrumX:      true,
+			MultiplaneMode: "hwplb",
 			NumberOfPlanes: 4, // CLI overrides planes
 		}
 

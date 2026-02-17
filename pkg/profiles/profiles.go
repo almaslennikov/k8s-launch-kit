@@ -50,9 +50,10 @@ type Profile struct {
 	Name                string
 	Plugin              string
 	Description         string
+	Notes               string
 	ProfileRequirements ProfileRequirements `yaml:"profileRequirements"`
 	NodeCapabilities    NodeCapabilities    `yaml:"nodeCapabilities"`
-	DeploymentGuide     string
+	DeploymentGuide     string              `yaml:"deploymentGuide"`
 	Templates           []string
 }
 
@@ -172,11 +173,10 @@ func (p *Profile) Validate(requirements *config.Profile, capabilities *config.Cl
 	return true, ""
 }
 
-// UpdateManifestsPaths appends the directory path to the templates and deployment guide
+// UpdateManifestsPaths appends the directory path to the template file paths.
+// DeploymentGuide is a URL path suffix, not a file — it is left unchanged.
 func (p *Profile) UpdateManifestsPaths(dirPath string) {
 	for i := range p.Templates {
 		p.Templates[i] = filepath.Join(dirPath, p.Templates[i])
 	}
-
-	p.DeploymentGuide = filepath.Join(dirPath, p.DeploymentGuide)
 }

@@ -8,7 +8,7 @@ nodeCapabilities:
   rdma: true
 description: |
   IP over Infiniband with RDMA sharev device profile offers InfiniBand networking with shared RDMA resources.
-deploymentGuide: ipoib-rdma-shared.rst
+deploymentGuide: quick-start/ipoib-rdma-shared.html
 templates:
   - 10-nicclusterpolicy.yaml
   - 20-ippool.yaml

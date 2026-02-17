@@ -18,9 +18,12 @@ package networkoperatorplugin
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
+	htmltemplate "html/template"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -75,11 +78,11 @@ func ProcessTemplate(templatePath string, config *config.LaunchKubernetesConfig)
 }
 
 // ProcessProfileTemplates processes all template files in a profile directory
-func (p *NetworkOperatorPlugin) GenerateProfileDeploymentFiles(profile *profiles.Profile, config *config.LaunchKubernetesConfig) (map[string]string, error) {
+func (p *NetworkOperatorPlugin) GenerateProfileDeploymentFiles(profile *profiles.Profile, cfg *config.LaunchKubernetesConfig) (map[string]string, error) {
 	results := make(map[string]string)
 
 	for _, templatePath := range profile.Templates {
-		processed, err := ProcessTemplate(templatePath, config)
+		processed, err := ProcessTemplate(templatePath, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to process template %s: %w", templatePath, err)
 		}
@@ -87,5 +90,82 @@ func (p *NetworkOperatorPlugin) GenerateProfileDeploymentFiles(profile *profiles
 		results[filepath.Base(templatePath)] = processed
 	}
 
+	// Generate HTML overview
+	operatorVersion := ""
+	docsBaseURL := ""
+	if cfg.NetworkOperator != nil {
+		operatorVersion = cfg.NetworkOperator.Version
+		docsBaseURL = cfg.NetworkOperator.DocsBaseURL
+	}
+	htmlContent, err := GenerateOverviewHTML(profile, operatorVersion, docsBaseURL, results)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate overview HTML: %w", err)
+	}
+	results["overview.html"] = htmlContent
+
 	return results, nil
 }
+
+// buildDocURL constructs the full documentation URL from the base URL and guide path.
+func buildDocURL(baseURL, guidePath string) string {
+	if baseURL == "" || guidePath == "" {
+		return ""
+	}
+	return strings.TrimRight(baseURL, "/") + "/" + guidePath
+}
+
+// overviewFile represents a generated file with its content.
+type overviewFile struct {
+	Name    string
+	Content string
+}
+
+// overviewData holds the data for the HTML overview template.
+type overviewData struct {
+	ProfileName     string
+	Description     string
+	Notes           string
+	Files           []overviewFile
+	DocURL          string
+	OperatorVersion string
+}
+
+// GenerateOverviewHTML renders an HTML overview page for the generated profile.
+func GenerateOverviewHTML(profile *profiles.Profile, operatorVersion, docsBaseURL string, renderedFiles map[string]string) (string, error) {
+	filenames := make([]string, 0, len(renderedFiles))
+	for filename := range renderedFiles {
+		if filename != "overview.html" {
+			filenames = append(filenames, filename)
+		}
+	}
+	sort.Strings(filenames)
+
+	files := make([]overviewFile, 0, len(filenames))
+	for _, name := range filenames {
+		files = append(files, overviewFile{Name: name, Content: renderedFiles[name]})
+	}
+
+	data := overviewData{
+		ProfileName:     profile.Name,
+		Description:     strings.TrimSpace(profile.Description),
+		Notes:           strings.TrimSpace(profile.Notes),
+		Files:           files,
+		DocURL:          buildDocURL(docsBaseURL, profile.DeploymentGuide),
+		OperatorVersion: operatorVersion,
+	}
+
+	tmpl, err := htmltemplate.New("overview").Parse(overviewHTMLTemplate)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse overview template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute overview template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+//go:embed overview.html
+var overviewHTMLTemplate string

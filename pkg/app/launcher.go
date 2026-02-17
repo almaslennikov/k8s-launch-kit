@@ -384,6 +384,9 @@ func (l *Launcher) saveDeploymentFiles(renderedFiles map[string]string, outputDi
 	}
 
 	l.ui.Success("Saved %d file(s) to: %s", len(renderedFiles), outputDir)
+	if _, ok := renderedFiles["overview.html"]; ok {
+		l.ui.Info("Profile overview: %s/overview.html", outputDir)
+	}
 	l.logger.Info("All deployment files saved successfully",
 		"directory", outputDir,
 		"fileCount", len(renderedFiles))

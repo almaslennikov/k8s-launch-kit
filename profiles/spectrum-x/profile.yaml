@@ -14,7 +14,11 @@ description: |
   Spectrum-X profile provides optimized multi-rail networking with OVS hardware offload,
   DOCA acceleration, and advanced NIC firmware configuration for AI workloads.
   Supports hwplb, uniplane, and none multiplane modes with RDMA exclusive mode.
-deploymentGuide: spectrum-x.rst
+notes: |
+  This profile does not generate CIDR pool configurations, as they require knowledge
+  of the switch configuration. Please refer to your Spectrum-X deployment guide for
+  CIDR pool setup instructions.
+deploymentGuide: nic-conf-operator/spectrum-x-configuration.html
 templates:
   - 10-nicclusterpolicy.yaml
   - 30-nicconfigurationtemplate.yaml
